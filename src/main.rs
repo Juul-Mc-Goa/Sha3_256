@@ -46,8 +46,8 @@ impl State {
                 };
 
                 tmp[5 * z + x] = self.xor_column(left_neighbor, z)
-                    ^ ((self.xor_column(right_neighbor, z) >> 1)
-                        | (self.xor_column(right_neighbor, down_neighbor) << 7));
+                    ^ ((self.xor_column(right_neighbor, z) << 1)
+                        | (self.xor_column(right_neighbor, down_neighbor) >> 7));
             }
         }
 
@@ -92,8 +92,23 @@ mod tests {
         inner_state[0] = 1;
         let mut state = State(inner_state.clone());
         state.theta();
-        println!("{state:?}");
+        // println!("{state:?}");
+
+        // state(0, 0, 0) is unchanged
         assert_eq!(state.get_bit(0, 0, 0), 1);
+
+        // state(1, _, 0) is changed to 1
         assert_eq!(state.get_bit(1, 0, 0), 1);
+        assert_eq!(state.get_bit(1, 1, 0), 1);
+        assert_eq!(state.get_bit(1, 2, 0), 1);
+        assert_eq!(state.get_bit(1, 3, 0), 1);
+        assert_eq!(state.get_bit(1, 4, 0), 1);
+
+        // state(4, _, 1) is changed to 1
+        assert_eq!(state.get_bit(4, 0, 1), 1);
+        assert_eq!(state.get_bit(4, 1, 1), 1);
+        assert_eq!(state.get_bit(4, 2, 1), 1);
+        assert_eq!(state.get_bit(4, 3, 1), 1);
+        assert_eq!(state.get_bit(4, 4, 1), 1);
     }
 }
