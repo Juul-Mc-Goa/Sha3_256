@@ -2,9 +2,9 @@ mod constants;
 
 use std::string::FromUtf8Error;
 
-use constants::STATE_SIZE_U64;
-
-use crate::constants::{OFFSETS, ROUND_CONSTANT_MAGIC_VAL};
+use crate::constants::{
+    N_ROUNDS, OFFSETS, OUTPUT_BYTES, RATE, RATE_BYTES, ROUND_CONSTANT_MAGIC_VAL, STATE_SIZE_U64,
+};
 
 /// The internal state modified during hashing. The bit indexed by
 /// `(x, y, z)` is stored at bit `z` of `state.0[5y + x]`.
@@ -101,7 +101,7 @@ impl State {
 
         for j in 0..=6 {
             // shift by `2^j - 1`
-            rc |= round_constant(j + round_idx) << ((1 << j) - 1)
+            rc |= round_constant(j + 7 * round_idx) << ((1 << j) - 1)
         }
 
         // update lane `0, 0`.
@@ -116,7 +116,13 @@ impl State {
         self.iota(round_index);
     }
 
-    pub fn as_string(&self) -> Result<String, FromUtf8Error> {
+    pub fn apply_many_rounds(&mut self) {
+        for i in 0..N_ROUNDS {
+            self.apply_round(i);
+        }
+    }
+
+    pub fn as_bytes(&self) -> [u8; 8 * STATE_SIZE_U64] {
         let mut result = [0_u8; 8 * STATE_SIZE_U64];
         for y in 0..5 {
             for x in 0..5 {
@@ -125,7 +131,26 @@ impl State {
                 }
             }
         }
-        String::from_utf8(result.to_vec())
+        result
+    }
+
+    pub fn as_string(&self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.as_bytes().to_vec())
+    }
+}
+
+impl From<&[u8]> for State {
+    fn from(value: &[u8]) -> Self {
+        let mut state = [0_u64; STATE_SIZE_U64];
+        for (idx, chunk) in value.chunks(8).enumerate() {
+            let x = idx % 5;
+            let y = idx / 5;
+            for (i, b) in chunk.iter().enumerate() {
+                state[5 * y + x] |= (*b as u64) << (8 * i);
+            }
+        }
+
+        Self(state)
     }
 }
 
@@ -153,27 +178,90 @@ fn round_constant(mut t: usize) -> u64 {
 
     let mut r: u8 = 1;
 
-    println!("r: {r}");
+    // println!("t: {t}, r: {r}");
     for _ in 1..=t {
         if (r >> 7) == 1 {
             r = (r << 1) ^ ROUND_CONSTANT_MAGIC_VAL;
         } else {
             r <<= 1;
         }
-        println!("r: {r}");
+        // println!("t: {t}, r: {r}");
     }
 
     (r & 1) as u64
 }
 
-pub fn apply_keccak_permutation(input: String) -> String {
-    todo!()
+pub fn keccak_permutation(input: String) -> String {
+    let mut state = State::from(input.as_str());
+
+    for round_idx in 0..N_ROUNDS {
+        state.apply_round(round_idx);
+    }
+
+    state.as_string().unwrap()
+}
+
+pub fn xor_bytes(left: &mut [u8], right: &[u8]) {
+    for (l, r) in left.iter_mut().zip(right.iter()) {
+        *l ^= r;
+    }
+}
+
+pub fn pad(input: &mut Vec<u8>, required_len: usize) {
+    let count = (-(8 * input.len() as i64) - 2).rem_euclid(required_len as i64) as usize;
+
+    if count != 0 {
+        let first_idx = input.len();
+        let bytes_to_add = count.div_ceil(8);
+        let last_shift = count & 7;
+        let last_idx = first_idx + bytes_to_add - 1;
+        input.extend((0..bytes_to_add).map(|_| 0));
+
+        input[first_idx] |= 1;
+        input[last_idx] |= 1 << last_shift;
+    }
+
+    input.push(1);
+    input.extend((0..count).map(|_| 0));
+    input.push(1 << 7);
+}
+
+pub fn sponge(input: &str) -> String {
+    // pad
+    let mut padded_input: Vec<u8> = input.as_bytes().to_vec();
+    pad(&mut padded_input, RATE);
+
+    // absorb
+    let mut temp = [0_u8; 8 * STATE_SIZE_U64];
+    let mut state = State::new();
+    for chunk in padded_input.chunks_exact(RATE_BYTES) {
+        xor_bytes(&mut temp, chunk);
+        state = State::from(temp.as_slice());
+
+        state.apply_many_rounds();
+        temp = state.as_bytes();
+    }
+
+    // squeeze
+    let mut result: Vec<u8> = Vec::from(&temp[0..RATE_BYTES]);
+    while result.len() < OUTPUT_BYTES {
+        state.apply_many_rounds();
+        result.append(&mut state.as_bytes()[0..RATE_BYTES].to_vec());
+    }
+
+    // truncate
+    // String::from_utf8(result[0..OUTPUT_LEN].to_vec()).unwrap()
+    let mut result_string = String::new();
+    // use hex representation
+    result_string.extend(result[0..OUTPUT_BYTES].iter().map(|c| format!("{:02x}", c)));
+
+    result_string
 }
 
 fn main() {
-    // round_constant(20);
-    let state = State::from("test");
-    println!("{}", state.as_string().unwrap());
+    let input = String::from("test");
+    let output = sponge(&input);
+    println!("{}", output);
 }
 
 #[cfg(test)]
@@ -186,7 +274,6 @@ mod tests {
         inner_state[0] = 1;
         let mut state = State(inner_state.clone());
         state.theta();
-        // println!("{state:?}");
 
         // state(0, 0, 0) is unchanged
         assert_eq!(state.get_bit(0, 0, 0), 1);

@@ -1,11 +1,16 @@
-/// number of bytes in a `State`.
-pub const STATE_BYTES: usize = 200;
+// number of bytes in a `State`.
+// pub const STATE_BYTES: usize = 200;
 pub const STATE_SIZE_U64: usize = 25;
 /// number of rounds performed by the hash algorithm.
 pub const N_ROUNDS: usize = 24;
 /// constant used when updating the round constant when applying `iota`
 /// it's exactly `1 + 2^4 + 2^5 + 2^6`
 pub const ROUND_CONSTANT_MAGIC_VAL: u8 = 113;
+
+// pub const CAPACITY: usize = 512;
+pub const RATE: usize = 1088;
+pub const RATE_BYTES: usize = 136; // 1088 / 8
+pub const OUTPUT_BYTES: usize = 32; // 256 / 8
 
 // Offsets used when applying `rho`
 pub const OFFSETS: [[i16; 5]; 5] = [
