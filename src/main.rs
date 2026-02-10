@@ -1,5 +1,7 @@
 mod constants;
 
+use std::string::FromUtf8Error;
+
 use constants::STATE_SIZE_U64;
 
 use crate::constants::{OFFSETS, ROUND_CONSTANT_MAGIC_VAL};
@@ -113,30 +115,65 @@ impl State {
         self.chi();
         self.iota(round_index);
     }
+
+    pub fn as_string(&self) -> Result<String, FromUtf8Error> {
+        let mut result = [0_u8; 8 * STATE_SIZE_U64];
+        for y in 0..5 {
+            for x in 0..5 {
+                for z in 0..8 {
+                    result[8 * (5 * y + x) + z] = (self.0[5 * y + x] >> (8 * z)) as u8;
+                }
+            }
+        }
+        String::from_utf8(result.to_vec())
+    }
+}
+
+impl From<&str> for State {
+    fn from(value: &str) -> Self {
+        let mut state = [0_u64; STATE_SIZE_U64];
+        for (idx, chunk) in value.as_bytes().chunks(8).enumerate() {
+            let x = idx % 5;
+            let y = idx / 5;
+            for (i, b) in chunk.iter().enumerate() {
+                state[5 * y + x] |= (*b as u64) << (8 * i);
+            }
+        }
+
+        Self(state)
+    }
 }
 
 fn round_constant(mut t: usize) -> u64 {
-    let mut r: u8 = 1;
-
     t = t % 255;
 
     if t == 0 {
         return 1;
     }
 
+    let mut r: u8 = 1;
+
+    println!("r: {r}");
     for _ in 1..=t {
         if (r >> 7) == 1 {
             r = (r << 1) ^ ROUND_CONSTANT_MAGIC_VAL;
         } else {
             r <<= 1;
         }
+        println!("r: {r}");
     }
 
     (r & 1) as u64
 }
 
+pub fn apply_keccak_permutation(input: String) -> String {
+    todo!()
+}
+
 fn main() {
-    println!("Hello, world!");
+    // round_constant(20);
+    let state = State::from("test");
+    println!("{}", state.as_string().unwrap());
 }
 
 #[cfg(test)]
