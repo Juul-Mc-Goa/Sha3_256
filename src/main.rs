@@ -105,6 +105,14 @@ impl State {
         // update lane `0, 0`.
         self.0[0] ^= rc;
     }
+
+    pub fn apply_round(&mut self, round_index: usize) {
+        self.theta();
+        self.rho();
+        self.pi();
+        self.chi();
+        self.iota(round_index);
+    }
 }
 
 fn round_constant(mut t: usize) -> u64 {
