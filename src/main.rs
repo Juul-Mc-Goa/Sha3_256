@@ -1,4 +1,5 @@
 mod constants;
+mod test_vectors;
 
 use std::string::FromUtf8Error;
 
@@ -311,16 +312,17 @@ pub fn sha3_256(input: &str) -> String {
 }
 
 fn main() {
-    // let input = [0x13_u8];
-    // let bit_len = 5;
-    // println!("input: {input:x?}");
+    let input = [0xe9_u8];
+    let bit_len = 8;
+    println!("sponge input: {input:x?}");
 
-    // let output = sponge(&input, bit_len);
-    // println!("output: {output}");
+    let output = sponge(&input, bit_len);
+    println!("output: {output}");
 
     let input = String::from("test");
+    println!("\nsha3 input: {input}");
     let output = sha3_256(&input);
-    println!("\noutput: {}", output);
+    println!("output: {}", output);
 }
 
 #[cfg(test)]
