@@ -38,7 +38,6 @@ impl State {
                 _ => (x - 1, x + 1),
             };
 
-            // println!("x: {x}, left: {left_neighbor}, right: {right_neighbor}");
             let unshifted_xor = self.xor_column(right_neighbor);
             tmp[x] =
                 self.xor_column(left_neighbor) ^ ((unshifted_xor << 1) | (unshifted_xor >> 63));
@@ -111,32 +110,16 @@ impl State {
 
     pub fn apply_round(&mut self, round_index: usize) {
         self.theta();
-        // println!("after theta:");
-        // pretty_print_bytes(&self.as_bytes());
         self.rho();
-        // println!("after rho:");
-        // pretty_print_bytes(&self.as_bytes());
         self.pi();
-        // println!("after pi:");
-        // pretty_print_bytes(&self.as_bytes());
         self.chi();
-        // println!("after chi:");
-        // pretty_print_bytes(&self.as_bytes());
         self.iota(round_index);
-        // println!("after iota:");
-        // pretty_print_bytes(&self.as_bytes());
     }
 
     pub fn apply_f(&mut self) {
-        // println!();
-        // println!("initial state:");
-        // pretty_print_bytes(&self.as_bytes());
-
         for i in 0..N_ROUNDS {
-            // println!("\nround {i}:");
             self.apply_round(i);
         }
-        // println!();
     }
 
     pub fn as_bytes(&self) -> [u8; 8 * STATE_SIZE_U64] {
@@ -215,12 +198,6 @@ fn round_constant(mut t: usize) -> u64 {
     (r & 1) as u64
 }
 
-pub fn xor_bytes(left: &mut [u8], right: &[u8]) {
-    for (l, r) in left.iter_mut().zip(right.iter()) {
-        *l ^= r;
-    }
-}
-
 pub fn pad(input: &mut Vec<u8>, bit_len: usize, required_len: usize) {
     let last_idx = input.len();
     input.push(0);
@@ -248,13 +225,6 @@ pub fn pad(input: &mut Vec<u8>, bit_len: usize, required_len: usize) {
     input[padded_last_idx] |= 1 << 7;
 }
 
-// fn bytes_to_hex(bytes: &[u8]) -> String {
-//     bytes
-//         .iter()
-//         .map(|b| format!("{:02x}", b))
-//         .collect::<String>()
-// }
-
 #[allow(dead_code)]
 fn pretty_print_bytes(bytes: &[u8]) {
     for chunk in bytes.chunks(16) {
@@ -271,23 +241,12 @@ pub fn sponge(input: &[u8], bit_len: usize) -> String {
     // pad
     let mut padded_input: Vec<u8> = input.to_vec();
     pad(&mut padded_input, bit_len, RATE_BYTES);
-    // println!("padded_input:");
-    // pretty_print_bytes(&padded_input);
-    // println!("padded length: {}", padded_input.len());
 
     // absorb
     let mut state = State::new();
     for chunk in padded_input.chunks_exact(RATE_BYTES) {
-        // println!("state:");
-        // pretty_print_bytes(&state.as_bytes());
-        // println!("chunk to xor");
-        // pretty_print_bytes(chunk);
         state.xor_bytes(chunk);
-        // println!("after xor");
-        // pretty_print_bytes(&state.as_bytes());
         state.apply_f();
-        // println!("after f: ");
-        // pretty_print_bytes(&state.as_bytes());
     }
 
     // squeeze
