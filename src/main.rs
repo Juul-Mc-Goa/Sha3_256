@@ -1,5 +1,6 @@
 mod constants;
-mod test_vectors;
+#[cfg(test)]
+mod test;
 
 use std::string::FromUtf8Error;
 
@@ -273,7 +274,6 @@ fn main() {
     let input = [0xe9_u8];
     let bit_len = 8;
     println!("sponge input: {input:x?}");
-
     let output = sponge(&input, bit_len);
     println!("output: {output}");
 
