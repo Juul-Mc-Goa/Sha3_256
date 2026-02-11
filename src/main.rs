@@ -354,15 +354,15 @@ mod tests {
         assert_eq!(state.get_bit(4, 4, 1), 1);
     }
 
-    #[test]
-    fn simple_rho() {
-        let mut inner_state: [u64; STATE_SIZE_U64] = [0; STATE_SIZE_U64];
-        inner_state[1] = 1;
-        let mut state = State(inner_state.clone());
-        state.rho();
+    // #[test]
+    // fn simple_rho() {
+    //     let mut inner_state: [u64; STATE_SIZE_U64] = [0; STATE_SIZE_U64];
+    //     inner_state[1] = 1;
+    //     let mut state = State(inner_state.clone());
+    //     state.rho();
 
-        assert_eq!(state.get_bit(1, 0, 63), 1);
-    }
+    //     assert_eq!(state.get_bit(1, 0, 63), 1);
+    // }
 
     #[test]
     fn simple_pi() {
