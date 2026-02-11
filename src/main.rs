@@ -200,7 +200,6 @@ fn round_constant(mut t: usize) -> u64 {
 
 pub fn pad(input: &mut Vec<u8>, bit_len: usize, required_len: usize) {
     let last_idx = input.len();
-    input.push(0);
 
     // add padding: 0b110
     let first_free_bit_idx = bit_len & 7;
